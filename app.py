@@ -13,6 +13,8 @@ def categorize_description(description):
         return 'GALON'
     elif 'isi ulang' in description and description.strip() == 'isi ulang':
         return 'GALON'
+    elif 'air' in description and description.strip() == 'air':
+        return 'GALON'
     
     # Exact match for beras
     elif 'beras' in description and description.strip() == 'beras':
