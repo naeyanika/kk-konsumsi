@@ -11,7 +11,7 @@ def categorize_description(description):
         return 'GALON'
     elif 'beras' in description:
         return 'BERAS'
-    elif 'mini training' in description:
+    elif 'mini' in description and 'training' in description:
         return 'MINI TRAINING'
     elif 'jumsih' in description or 'jumat bersih' in description or 'jum\'at' in description or 'bersih' in description:
         return 'JUMSIH'
