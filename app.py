@@ -3,32 +3,18 @@ import streamlit as st
 import io
 import locale
 
+    
 def categorize_description(description):
     description = description.lower()
-    
-    # Exact match for single keywords
-    if 'aqua' in description and description.strip() == 'aqua':
+
+    if 'aqua' in description or 'galon' in description or 'isi ulang' in description:
         return 'GALON'
-    elif 'galon' in description and description.strip() == 'galon':
-        return 'GALON'
-    elif 'isi ulang' in description and description.strip() == 'isi ulang':
-        return 'GALON'
-    elif 'air' in description and description.strip() == 'air':
-        return 'GALON'
-    
-    # Exact match for beras
-    elif 'beras' in description and description.strip() == 'beras':
+    elif 'beras' in description:
         return 'BERAS'
-    
-    # Exact match for mini training
-    elif 'mini training' in description and description.strip() == 'mini training':
+    elif 'mini training' in description:
         return 'MINI TRAINING'
-    
-    # Exact match for jumsih
-    elif 'jumsih' in description and description.strip() == 'jumsih':
+    elif 'jumsih' in description or 'jumat bersih' in description or 'jum\'at' in description or 'bersih' in description:
         return 'JUMSIH'
-    
-    # Everything else goes to Lainnya
     else:
         return 'LAINNYA'
 
