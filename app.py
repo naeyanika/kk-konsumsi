@@ -95,7 +95,7 @@ def main():
     st.title('Kategorisasi Data Konsumsi-55300000')
     st.write("""File ini berisikan data transaksi by account konsumsi/553000000 (Beras, Air Minum, Air Galon, Kopi, Gula, Teh, Syukuran Kantor, Mini Training, dll)""")
     st.write("""Rapihkan header dan footer, dan untuk header. cek terlebih dahulu karena pasti ada karakter spesial""")
-    st.write("""Untuk data header seperti berikut: | VOUCHER NO. | TRANS. DATE | ENTRY DATE | DESCRIPTION | DEBIT |""")
+    st.write("""Untuk data header seperti berikut: | VOUCHER NO. | TRANS. DATE | DESCRIPTION | DEBIT |""")
     
     # File uploader
     uploaded_file = st.file_uploader("Choose an Excel file", type=['xlsx', 'xls'])
