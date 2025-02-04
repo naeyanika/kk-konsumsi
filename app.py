@@ -38,12 +38,16 @@ def process_data(file):
     
     # Convert Transaction Date to datetime
     df['TRANS. DATE'] = pd.to_datetime(df['TRANS. DATE'])
+    df['ENTRY DATE'] = df['TRANS. DATE'].dt.strftime('%d/%m/%Y')
+    
+    # Sort the data in ascending order by TRANS. DATE
+    df = df.sort_values('TRANS. DATE')
     
     # Add CATEGORY column
     df['CATEGORY'] = df['DESCRIPTION'].apply(categorize_description)
     
     # Create month-year column with custom formatting
-    df['MONTH-YEAR'] = df['TRANS. DATE'].dt.strftime('%B, %Y')
+    df['MONTH-YEAR'] = df['TRANS. DATE'].dt.strftime('%b, %Y')
     
     # Prepare summary and category-specific dataframes
     summary_df = df.groupby('MONTH-YEAR')['DEBIT'].sum().reset_index()
@@ -88,7 +92,10 @@ def export_to_excel(processed_data):
     return output
 
 def main():
-    st.title('Excel Data Categorization and Export Tool')
+    st.title('Kategorisasi Data Konsumsi-55300000')
+    st.write("""File ini berisikan data transaksi by account konsumsi/553000000 (Beras, Air Minum, Air Galon, Kopi, Gula, Teh, Syukuran Kantor, Mini Training, dll)""")
+    st.write("""Rapihkan header dan footer, dan untuk header. cek terlebih dahulu karena pasti ada karakter spesial""")
+    st.write("""Untuk data header seperti berikut: | VOUCHER NO. | TRANS. DATE | ENTRY DATE | DESCRIPTION | DEBIT |""")
     
     # File uploader
     uploaded_file = st.file_uploader("Choose an Excel file", type=['xlsx', 'xls'])
