@@ -1,21 +1,35 @@
 import pandas as pd
 import streamlit as st
 import io
-import locale
 
-    
 def categorize_description(description):
     description = description.lower()
-
+    
+    category_counts = {
+        'galon': 0,
+        'beras': 0,
+        'mini training': 0, 
+        'jumsih': 0,
+        'lainnya': 0
+    }
+    
     if 'aqua' in description or 'galon' in description or 'isi ulang' in description:
-        return 'GALON'
-    elif 'beras' in description:
-        return 'BERAS'
-    elif 'mini' in description and 'training' in description:
-        return 'MINI TRAINING'
-    elif 'jumsih' in description or 'jumat bersih' in description or 'jum\'at' in description or 'bersih' in description:
-        return 'JUMSIH'
+        category_counts['galon'] += 1
+    if 'beras' in description:
+        category_counts['beras'] += 1
+    if 'mini' in description and 'training' in description:
+        category_counts['mini training'] += 1
+    if 'jumsih' in description or 'jumat bersih' in description or 'jum\'at' in description or 'bersih' in description:
+        category_counts['jumsih'] += 1
+    if 'teh' in description and 'kopi' in description and 'gula' in description:
+        category_counts['lainnya'] += 1
+    
+    if sum(category_counts.values()) > 1:
+        return 'LAINNYA'
     else:
+        for category, count in category_counts.items():
+            if count > 0:
+                return category.upper()
         return 'LAINNYA'
 
 def process_data(file):
