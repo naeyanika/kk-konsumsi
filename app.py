@@ -37,8 +37,7 @@ def process_data(file):
     df = pd.read_excel(file)
     
     # Convert Transaction Date to datetime
-    df['TRANS. DATE'] = pd.to_datetime(df['TRANS. DATE'])
-    df['ENTRY DATE'] = df['TRANS. DATE'].dt.strftime('%d/%m/%Y')
+    df['TRANS. DATE'].dt.strftime('%d/%m/%Y')
     
     # Sort the data in ascending order by TRANS. DATE
     df = df.sort_values('TRANS. DATE')
