@@ -1,18 +1,32 @@
 import pandas as pd
 import streamlit as st
 import io
+import locale
 
 def categorize_description(description):
     description = description.lower()
     
-    if any(trigger in description for trigger in ['aqua', 'galon', 'gallon', 'isi ulang']):
+    # Exact match for single keywords
+    if 'aqua' in description and description.strip() == 'aqua':
         return 'GALON'
-    elif any(trigger in description for trigger in ['beras', 'breas']):
+    elif 'galon' in description and description.strip() == 'galon':
+        return 'GALON'
+    elif 'isi ulang' in description and description.strip() == 'isi ulang':
+        return 'GALON'
+    
+    # Exact match for beras
+    elif 'beras' in description and description.strip() == 'beras':
         return 'BERAS'
-    elif any(trigger in description for trigger in ['mini', 'training', 'mini training']):
+    
+    # Exact match for mini training
+    elif 'mini training' in description and description.strip() == 'mini training':
         return 'MINI TRAINING'
-    elif any(trigger in description for trigger in ['jumsih', 'jumat bersih', 'jum\'at', 'bersih']):
+    
+    # Exact match for jumsih
+    elif 'jumsih' in description and description.strip() == 'jumsih':
         return 'JUMSIH'
+    
+    # Everything else goes to Lainnya
     else:
         return 'LAINNYA'
 
@@ -26,16 +40,14 @@ def process_data(file):
     # Add CATEGORY column
     df['CATEGORY'] = df['DESCRIPTION'].apply(categorize_description)
     
-    # Create month-year column
-    df['MONTH-YEAR'] = df['TRANS. DATE'].dt.to_period('M')
+    # Create month-year column with custom formatting
+    df['MONTH-YEAR'] = df['TRANS. DATE'].dt.strftime('%B, %Y')
     
     # Prepare summary and category-specific dataframes
     summary_df = df.groupby('MONTH-YEAR')['DEBIT'].sum().reset_index()
-    summary_df['MONTH-YEAR'] = summary_df['MONTH-YEAR'].astype(str)
     
     # Category-specific monthly pivot
     category_pivot = df.groupby(['MONTH-YEAR', 'CATEGORY'])['DEBIT'].sum().unstack(fill_value=0).reset_index()
-    category_pivot['MONTH-YEAR'] = category_pivot['MONTH-YEAR'].astype(str)
     
     # Separate dataframes for each category
     category_dfs = {}
