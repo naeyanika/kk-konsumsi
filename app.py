@@ -18,7 +18,7 @@ def categorize_description(description):
     if 'beras' in description:
         category_counts['beras'] += 1
     if 'mini' in description and 'training' in description:
-        category_counts['mini training'] += 1
+        category_counts['training'] += 1
     if 'jumsih' in description or 'jumat bersih' in description or 'jum\'at' in description or 'bersih' in description:
         category_counts['jumsih'] += 1
     if 'teh' in description and 'kopi' in description and 'gula' in description:
