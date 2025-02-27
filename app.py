@@ -1,7 +1,8 @@
 import pandas as pd
 import streamlit as st
 import io
-from thefuzz import fuzz
+import re
+from fuzzywuzzy import fuzz
 
 def is_similar(text, keywords, threshold=85):
     """Check string similarity with fuzzy matching"""
@@ -22,6 +23,20 @@ def is_similar(text, keywords, threshold=85):
             return True
     return False
 
+def extract_rice_quantity(description):
+    """Extract rice quantity (kg) from description"""
+    description = str(description).lower()
+    
+    # Find all occurrences of numbers followed by "kg" near "beras"
+    if "beras" in description:
+        # Pattern: one or more digits, optional spaces, then "kg" or similar
+        matches = re.findall(r'(\d+)(?:\s*)(?:kg|kilogram|kilo)', description)
+        if matches:
+            # Return the sum of all rice quantities
+            return sum(int(match) for match in matches)
+    
+    return 0  # Return 0 if no rice or no quantity found
+
 def categorize_description(description):
     """Kategorisasi deskripsi dengan fuzzy matching dan prioritas yang tepat"""
     description = str(description).lower()
@@ -36,21 +51,22 @@ def categorize_description(description):
         'LAINNYA': []
     }
     
+    # Check for "beras" first - it has highest priority
+    if is_similar(description, ['beras'], threshold=85):
+        return 'BERAS'
+    
     # Count matched categories
     matches = {}
     for category, keywords in categories.items():
-        if is_similar(description, keywords):
+        if category != 'BERAS' and is_similar(description, keywords):
             matches[category] = True
     
-    # If multiple categories match, return LAINNYA
-    if len(matches) > 1:
+    # If multiple categories match or none match, return LAINNYA
+    if len(matches) != 1:
         return 'LAINNYA'
     # If one category matches, return that category
-    elif len(matches) == 1:
-        return list(matches.keys())[0]
-    # If no matches, return LAINNYA
     else:
-        return 'LAINNYA'
+        return list(matches.keys())[0]
 
 def process_data(file):
     # Read the Excel file
@@ -58,10 +74,8 @@ def process_data(file):
     
     # Convert Transaction Date to datetime
     df['TRANS. DATE'] = pd.to_datetime(df['TRANS. DATE'], errors='coerce')
-    df['TRANS. DATE'] = df['TRANS. DATE'].dt.strftime('%d/%m/%Y')
     
     # Sort the data in ascending order by TRANS. DATE
-    df['TRANS. DATE'] = pd.to_datetime(df['TRANS. DATE'], format='%d/%m/%Y')
     df = df.sort_values('TRANS. DATE')
     
     # Add CATEGORY column
@@ -70,21 +84,37 @@ def process_data(file):
     # Create month-year column with custom formatting
     df['MONTH-YEAR'] = df['TRANS. DATE'].dt.strftime('%b, %Y')
     
+    # Add RICE KG column to track rice quantities
+    df['RICE KG'] = df['DESCRIPTION'].apply(extract_rice_quantity)
+    
     # Prepare summary and category-specific dataframes
     summary_df = df.groupby('MONTH-YEAR')['DEBIT'].sum().reset_index()
     
     # Category-specific monthly pivot
     category_pivot = df.groupby(['MONTH-YEAR', 'CATEGORY'])['DEBIT'].sum().unstack(fill_value=0).reset_index()
     
+    # Create a rice summary sheet that includes both BERAS category and rice in LAINNYA
+    rice_summary = df.groupby('MONTH-YEAR').apply(
+        lambda x: pd.Series({
+            'BERAS_CATEGORY_KG': x[x['CATEGORY'] == 'BERAS']['RICE KG'].sum(),
+            'LAINNYA_WITH_RICE_KG': x[(x['CATEGORY'] == 'LAINNYA') & (x['RICE KG'] > 0)]['RICE KG'].sum(),
+            'TOTAL_RICE_KG': x['RICE KG'].sum()
+        })
+    ).reset_index()
+    
     # Separate dataframes for each category
     category_dfs = {}
     for category in df['CATEGORY'].unique():
         category_dfs[category] = df[df['CATEGORY'] == category]
     
+    # Create a dataframe for LAINNYA that contains rice
+    category_dfs['LAINNYA_WITH_RICE'] = df[(df['CATEGORY'] == 'LAINNYA') & (df['RICE KG'] > 0)]
+    
     return {
         'original': df,
         'summary': summary_df,
         'category_pivot': category_pivot,
+        'rice_summary': rice_summary,
         'category_dfs': category_dfs
     }
 
@@ -100,9 +130,16 @@ def export_to_excel(processed_data):
         # Write Category Pivot sheet
         processed_data['category_pivot'].to_excel(writer, sheet_name='CATEGORY PIVOT', index=False)
         
+        # Write Rice Summary sheet
+        processed_data['rice_summary'].to_excel(writer, sheet_name='JUMLAH BERAS', index=False)
+        
         # Write individual category sheets
         for category, df in processed_data['category_dfs'].items():
-            df.to_excel(writer, sheet_name=category, index=False)
+            sheet_name = category
+            # Limit sheet name length to 31 characters (Excel limitation)
+            if len(sheet_name) > 31:
+                sheet_name = sheet_name[:31]
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
         
         # Write original data sheet
         processed_data['original'].to_excel(writer, sheet_name='ORIGINAL DATA', index=False)
@@ -118,20 +155,6 @@ def main():
     st.write("""Rapihkan header dan footer, dan untuk header. cek terlebih dahulu karena pasti ada karakter spesial""")
     st.write("""Untuk data header seperti berikut: | VOUCHER NO. | TRANS. DATE | DESCRIPTION | DEBIT |""")
     
-    # Add custom keywords option
-    st.subheader("Custom Category Keywords (Optional)")
-    
-    with st.expander("Customize Category Keywords"):
-        custom_keywords = {}
-        for category in ['GALON', 'BERAS', 'MINI TRAINING', 'JUMSIH', 'LAINNYA']:
-            custom_input = st.text_input(
-                f"Keywords for {category} (comma separated):",
-                value="",
-                key=f"custom_{category}"
-            )
-            if custom_input:
-                custom_keywords[category] = [kw.strip() for kw in custom_input.split(',')]
-    
     # File uploader
     uploaded_file = st.file_uploader("Choose an Excel file", type=['xlsx', 'xls'])
     
@@ -146,6 +169,10 @@ def main():
         # Display category pivot
         st.subheader('Category Pivot')
         st.dataframe(processed_data['category_pivot'])
+        
+        # Display rice summary
+        st.subheader('Jumlah Beras per Bulan')
+        st.dataframe(processed_data['rice_summary'])
         
         # Export to Excel button
         if st.button('Export to Excel'):
