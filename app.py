@@ -109,7 +109,6 @@ def export_to_excel(processed_data):
             df.to_excel(writer, sheet_name=sheet_name, index=False)
         
         processed_data['original'].to_excel(writer, sheet_name='ORIGINAL DATA', index=False)
-    t
     output.seek(0)
     
     return output
