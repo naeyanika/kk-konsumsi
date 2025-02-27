@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 import io
 import re
-from fuzzywuzzy import fuzz
+from thefuzz import fuzz
 
 def is_similar(text, keywords, threshold=85):
     """Check string similarity with fuzzy matching"""
