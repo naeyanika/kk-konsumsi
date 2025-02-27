@@ -1,35 +1,55 @@
 import pandas as pd
 import streamlit as st
 import io
+from fuzzywuzzy import fuzz
+
+def is_similar(text, keywords, threshold=85):
+    """Check string similarity with fuzzy matching"""
+    text = str(text).lower()
+    
+    # Direct match first
+    if any(keyword.lower() in text for keyword in keywords):
+        return True
+    
+    # Fuzzy matching
+    for keyword in keywords:
+        keyword = keyword.lower()
+        if any(ratio >= threshold for ratio in [
+            fuzz.ratio(text, keyword),
+            fuzz.partial_ratio(text, keyword),
+            fuzz.token_sort_ratio(text, keyword)
+        ]):
+            return True
+    return False
 
 def categorize_description(description):
-    description = description.lower()
+    """Kategorisasi deskripsi dengan fuzzy matching dan prioritas yang tepat"""
+    description = str(description).lower()
     
-    category_counts = {
-        'galon': 0,
-        'beras': 0,
-        'mini training': 0, 
-        'jumsih': 0,
-        'lainnya': 0
+    # Define categories and their keywords
+    categories = {
+        'GALON': ['aqua', 'galon', 'isi ulang', 'air minum', 'gallon'],
+        'BERAS': ['beras'],
+        'MINI TRAINING': ['mini training', 'training', 'pelatihan'],
+        'JUMSIH': ['jumsih', 'jumat bersih', "jum'at", 'jum at', 'bersih'],
+        'SYUKURAN': ['syukuran', 'syukur'],
+        'LAINNYA': []
     }
     
-    if 'aqua' in description or 'galon' in description or 'isi ulang' in description:
-        category_counts['galon'] += 1
-    if 'beras' in description:
-        category_counts['beras'] += 1
-    if 'mini' in description and 'training' in description:
-        category_counts['training'] += 1
-    if 'jumsih' in description or 'jumat bersih' in description or 'jum\'at' in description or 'bersih' in description:
-        category_counts['jumsih'] += 1
-    if 'teh' in description and 'kopi' in description and 'gula' in description:
-        category_counts['lainnya'] += 1
+    # Count matched categories
+    matches = {}
+    for category, keywords in categories.items():
+        if is_similar(description, keywords):
+            matches[category] = True
     
-    if sum(category_counts.values()) > 1:
+    # If multiple categories match, return LAINNYA
+    if len(matches) > 1:
         return 'LAINNYA'
+    # If one category matches, return that category
+    elif len(matches) == 1:
+        return list(matches.keys())[0]
+    # If no matches, return LAINNYA
     else:
-        for category, count in category_counts.items():
-            if count > 0:
-                return category.upper()
         return 'LAINNYA'
 
 def process_data(file):
@@ -37,9 +57,11 @@ def process_data(file):
     df = pd.read_excel(file)
     
     # Convert Transaction Date to datetime
-    df['TRANS. DATE'].dt.strftime('%d/%m/%Y')
+    df['TRANS. DATE'] = pd.to_datetime(df['TRANS. DATE'], errors='coerce')
+    df['TRANS. DATE'] = df['TRANS. DATE'].dt.strftime('%d/%m/%Y')
     
     # Sort the data in ascending order by TRANS. DATE
+    df['TRANS. DATE'] = pd.to_datetime(df['TRANS. DATE'], format='%d/%m/%Y')
     df = df.sort_values('TRANS. DATE')
     
     # Add CATEGORY column
@@ -95,6 +117,20 @@ def main():
     st.write("""File ini berisikan data transaksi by account konsumsi/553000000 (Beras, Air Minum, Air Galon, Kopi, Gula, Teh, Syukuran Kantor, Mini Training, dll)""")
     st.write("""Rapihkan header dan footer, dan untuk header. cek terlebih dahulu karena pasti ada karakter spesial""")
     st.write("""Untuk data header seperti berikut: | VOUCHER NO. | TRANS. DATE | DESCRIPTION | DEBIT |""")
+    
+    # Add custom keywords option
+    st.subheader("Custom Category Keywords (Optional)")
+    
+    with st.expander("Customize Category Keywords"):
+        custom_keywords = {}
+        for category in ['GALON', 'BERAS', 'MINI TRAINING', 'JUMSIH', 'LAINNYA']:
+            custom_input = st.text_input(
+                f"Keywords for {category} (comma separated):",
+                value="",
+                key=f"custom_{category}"
+            )
+            if custom_input:
+                custom_keywords[category] = [kw.strip() for kw in custom_input.split(',')]
     
     # File uploader
     uploaded_file = st.file_uploader("Choose an Excel file", type=['xlsx', 'xls'])
